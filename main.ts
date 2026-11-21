@@ -1,33 +1,45 @@
-// A working gta6-cover-art-01 entry (Node 22, standard library only): the app is this directory's app/ folder, plain
-// static files a desktop browser loads offline (app/index.html and its ES modules, no library and no network
-// request), and the program hands it in. It copies app/ and screenshots/ from beside this file to /output and writes
-// /output/dossier.json, the summary the judge reads, with the vendored make.fun library. Only the plumbing, not the
-// cover art the bounty asks for: Cover Snap, a plain one-photo square cover with a sunset tint and a bold caption,
-// exported as a 1080 x 1080 PNG. Its two sample photos (app/samples/) were made for make.fun with an image model and
-// are free to use. Build your own GTA-style cover maker in its place, put your 3 or 4 PNG or JPEG screenshots in
-// screenshots/ (the first by name is the cover) and run it.
+// Neon Coast Cover Studio — entry program for gta6-cover-art-01.
 //
-// Serve it locally with `node serve.ts`, then open http://localhost:8080.
-// Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
+// Node 22, standard library only. This file does one job: hand the app
+// in. It copies this repository's app/ and screenshots/ into the grader's
+// output folder and writes the dossier the judge reads, using the kit's
+// own vendored library (vendor/makefun-app.ts, unchanged). The cover art
+// itself lives in app/src/cover.js; nothing here draws or grades anything.
+//
+// The two sample photos under app/samples/ were made with an image model
+// for make.fun and are free to use (kit RULES.txt).
+//
+// Try it locally with `node serve.ts` (opens the app at localhost:8080),
+// then hand it in with:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+// Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output.
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-app.ts';
 
+// The folder this file lives in, and the folder the grader reads.
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
+// The app first: every static file the browser needs, offline.
 mkdirSync(out, { recursive: true });
 cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });
-mkdirSync(join(out, 'screenshots'), { recursive: true });
-if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 
-// The scorer's own caps (reference/gate.json): only text_max_bytes shapes the bytes; the others refuse an entry the
-// scorer would refuse (more than 4 screenshots or one over 256 KiB; more than 993 files in app/ or 48 MiB of app
-// files, in all, or a path under app/ over 1000 bytes: app/ counts beside /output's own 1000-entry cap, its
-// screenshots/ and dossier.json).
+// Then the screenshots, if the maker has taken any yet.
+mkdirSync(join(out, 'screenshots'), { recursive: true });
+if (existsSync(join(here, 'screenshots'))) {
+  cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
+}
+
+// The dossier, written by the kit's library from exactly what we copied.
+// These caps mirror the scorer's own limits: only text_max_bytes shapes
+// the dossier bytes; the rest refuse an entry the scorer would refuse —
+// more than 4 screenshots or one over 256 KiB, more than 993 files in
+// app/ or 48 MiB of app files in all, or a path under app/ over 1000
+// bytes. app/ counts beside /output's own 1000-entry cap, which it
+// shares with screenshots/ and dossier.json, so keep room.
 writeFileSync(
   join(out, 'dossier.json'),
   buildDossier(out, {
